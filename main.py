@@ -29,11 +29,11 @@ def instagram_login(data: LoginRequest):
 def instagram_follow(data: FollowRequest):
     client = Client()
     try:
-        client.set_sessionid(data.sessionid)
+        # التصحيح هنا باستخدام الدالة الصحيحة لمكتبة instagrapi
+        client.login_by_sessionid(data.sessionid)
         target_user_id = client.user_id_by_username(data.target_username)
         client.user_follow(target_user_id)
         return {"status": "success", "message": "تمت المتابعة بنجاح"}
     except Exception as e:
-        # طباعة الخطأ بوضوح في سجلات Render لسهولة التتبع
         print(f"FOLLOW ERROR DETAILS: {str(e)}")
         raise HTTPException(status_code=400, detail=f"فشل تنفيذ المتابعة: {str(e)}")
