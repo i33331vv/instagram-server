@@ -16,6 +16,10 @@ class VerifyRequest(BaseModel):
     username: str
     code: str
 
+class FollowRequest(BaseModel):
+    sessionid: str
+    target_username: str
+
 @app.post("/api/login")
 def login_instagram(data: LoginRequest):
     cl = Client()
@@ -28,14 +32,12 @@ def login_instagram(data: LoginRequest):
         return {"status": "success", "sessionid": sessionid}
         
     except ChallengeRequired:
-        # إذا طلب انستغرام تحقق (مثل الموافقة من التطبيق أو الايميل)
         pending_clients[data.username] = cl
-        return {"status": "challenge_required", "message": "يرجى الموافقة على تسجيل الدخول من تطبيق انستغرام الخاص بك أو طلب رمز."}
+        return {"status": "challenge_required", "message": "يرجى إدخال رمز التحقق أو الموافقة من تطبيق انستغرام الخاص بك."}
         
     except TwoFactorRequired:
-        # إذا كان الحساب مفعل التحقق بخطوتين (2FA)
         pending_clients[data.username] = cl
-        return {"status": "two_factor_required", "message": "أدخل رمز التحقق الثنائي المرسل لهاتفك."}
+        return {"status": "two_factor_required", "message": "أدخل رمز التحقق الثنائي (2FA) المرسل لهاتفك أو بريدك."}
         
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -44,12 +46,11 @@ def login_instagram(data: LoginRequest):
 def verify_challenge(data: VerifyRequest):
     cl = pending_clients.get(data.username)
     if not cl:
-        raise HTTPException(status_code=400, detail="انتهت صلاحية الجلسة، حاول مجدداً.")
+        raise HTTPException(status_code=400, detail="انتهت صلاحية الجلسة، حاول تسجيل الدخول مجدداً.")
     
     try:
-        # محاولة إدخال الرمز الذي أرسله المستخدم
+        # محاولة إدخال الرمز وإتمام التحقق
         cl.challenge_code_handler = lambda username: data.code
-        # أو إتمام التحقق
         cookies = cl.get_cookies()
         sessionid = cookies.get("sessionid")
         
@@ -59,3 +60,14 @@ def verify_challenge(data: VerifyRequest):
         return {"status": "success", "sessionid": sessionid}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"رمز التحقق غير صحيح: {str(e)}")
+
+@app.post("/api/follow")
+def follow_user(data: FollowRequest):
+    cl = Client()
+    try:
+        cl.login_by_sessionid(data.sessionid)
+        user_id = cl.user_id_from_username(data.target_username)
+        cl.user_follow(user_id)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
