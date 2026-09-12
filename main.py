@@ -29,7 +29,6 @@ def instagram_login(data: LoginRequest):
 def instagram_follow(data: FollowRequest):
     client = Client()
     try:
-        # التصحيح هنا باستخدام الدالة الصحيحة لمكتبة instagrapi
         client.login_by_sessionid(data.sessionid)
         target_user_id = client.user_id_by_username(data.target_username)
         client.user_follow(target_user_id)
