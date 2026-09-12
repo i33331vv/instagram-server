@@ -1,5 +1,4 @@
 fastapi
 uvicorn
-instagrapi
 pydantic
-requests
+instagrapi>=2.1.3
